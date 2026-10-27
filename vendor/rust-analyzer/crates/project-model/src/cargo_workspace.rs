@@ -706,6 +706,19 @@ impl CargoWorkspace {
     }
 }
 
+/// Has `metadata` run with the variables `cargo` sets and removes. A removed one stays removed:
+/// set to an empty value it is another setting, and rustc refuses every question cargo asks it
+/// with `MACOSX_DEPLOYMENT_TARGET` empty, so the standard library's workspace fails to load and
+/// its crates are left with no dependencies.
+fn copy_envs(cargo: &std::process::Command, metadata: &mut cargo_metadata::MetadataCommand) {
+    for (name, value) in cargo.get_envs() {
+        match value {
+            Some(value) => _ = metadata.env(name, value),
+            None => _ = metadata.env_remove(name),
+        }
+    }
+}
+
 pub(crate) struct FetchMetadata {
     command: cargo_metadata::MetadataCommand,
     #[expect(dead_code)]
@@ -740,7 +753,7 @@ impl FetchMetadata {
         let mut command = MetadataCommand::new();
         command.env(NO_RUSTUP_AUTO_INSTALL_ENV.0, NO_RUSTUP_AUTO_INSTALL_ENV.1);
         command.cargo_path(cargo.get_program());
-        cargo.get_envs().for_each(|(var, val)| _ = command.env(var, val.unwrap_or_default()));
+        copy_envs(&cargo, &mut command);
         command.manifest_path(cargo_toml.to_path_buf());
         match &config.features {
             CargoFeatures::All => {
@@ -954,5 +967,24 @@ impl PackageData {
             _ => *it == parsed,
         };
         Some(written.filter(same).unwrap_or(parsed))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::ffi::OsStr;
+
+    /// A variable the toolchain command removes is removed from `cargo metadata`'s too, not set
+    /// empty, and one it sets is set.
+    #[test]
+    fn a_removed_variable_stays_removed_for_cargo_metadata() {
+        let mut cargo = std::process::Command::new("cargo");
+        cargo.env("RUSTUP_TOOLCHAIN", "nightly").env_remove("MACOSX_DEPLOYMENT_TARGET");
+        let mut metadata = cargo_metadata::MetadataCommand::new();
+        super::copy_envs(&cargo, &mut metadata);
+        let command = metadata.cargo_command();
+        let envs: Vec<(&OsStr, Option<&OsStr>)> = command.get_envs().collect();
+        assert!(envs.contains(&(OsStr::new("MACOSX_DEPLOYMENT_TARGET"), None)), "{envs:?}");
+        assert!(envs.contains(&(OsStr::new("RUSTUP_TOOLCHAIN"), Some(OsStr::new("nightly")))));
     }
 }

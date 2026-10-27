@@ -1001,6 +1001,12 @@ each one's section: what `[Unreleased]` had, and the title of each change merged
 
 ### Fixed
 
+- A workspace loaded again (after a build script's output changes, say) keeps the standard
+  library's dependencies. Loading the library's own workspace ran `cargo metadata` with each
+  variable it means to leave unset set to an empty value instead, and with
+  `MACOSX_DEPLOYMENT_TARGET` empty rustc refuses every question cargo asks; the load fell back to
+  `std`, `core` and `alloc` with no dependencies. The next build then lost the prelude
+  (`#[derive]` unresolved, `None` not in scope), or a frozen def map of `std` did not read.
 - A closure that captures nothing, coerced to `fn` and borrowed as part of a constant, is
   promoted as rustc promotes it: minijinja's `type_erase!` vtable, so `tract-linalg`'s build
   script runs. blaze lowered it as a temporary of the frame, so the reference outlived it: the
