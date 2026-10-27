@@ -155,8 +155,10 @@ pub(super) fn served(db: &dyn SourceDatabase, krate: Crate) -> Option<(DefMap, L
     if frozen.mode == Mode::Check {
         return None;
     }
-    let (def_map, local) = decode(db, krate, &frozen.bytes)
-        .unwrap_or_else(|why| panic!("a frozen def map does not read: {why}"));
+    let (def_map, local) = decode(db, krate, &frozen.bytes).unwrap_or_else(|why| {
+        let name = krate.extra_data(db).display_name.as_ref().map(|it| it.to_string());
+        panic!("the frozen def map of `{}` does not read: {why}", name.as_deref().unwrap_or("?"))
+    });
     if frozen.mode == Mode::Verify {
         match encode_maps(db, krate, &def_map, &local) {
             Ok(written) if *written == *frozen.bytes => {}
@@ -2063,7 +2065,12 @@ impl Dec<'_> {
                 false => None,
             };
             if !self.paths.contains_key(&owner) {
-                let krate = *self.closure.get(owner as usize).ok_or("a file's crate")?;
+                let krate = *self.closure.get(owner as usize).ok_or_else(|| {
+                    format!(
+                        "a file's crate: crate {owner} of a dependency closure of {} crates",
+                        self.closure.len()
+                    )
+                })?;
                 self.paths.insert(owner, root_dir(self.db, krate)?);
             }
             let (dir, real, source_root) = &self.paths[&owner];
