@@ -1001,6 +1001,11 @@ each one's section: what `[Unreleased]` had, and the title of each change merged
 
 ### Fixed
 
+- A closure that captures nothing, coerced to `fn` and borrowed as part of a constant, is
+  promoted as rustc promotes it: minijinja's `type_erase!` vtable, so `tract-linalg`'s build
+  script runs. blaze lowered it as a temporary of the frame, so the reference outlived it: the
+  borrow checker said E0515, and without it the call through the table jumped to 0.
+  `harness/breakers` has the case (`promoted_closure_table`).
 - A crate blaze builds itself (a proc macro, a build script, or what either links) reads the
   variables its build script set with `cargo:rustc-env`: `mime_guess`'s
   `MIME_TYPES_GENERATED_PATH`, so `rust-embed-impl` builds. blaze kept only cargo's own
