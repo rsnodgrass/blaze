@@ -735,9 +735,7 @@ impl Unit {
             env: std::env::vars()
                 .filter(|(name, _)| name.starts_with(PROGRAM_OF) || name == SCRATCH)
                 .collect(),
-            crate_env: std::env::vars()
-                .filter(|(name, _)| super::own_script::read_by_crates(name))
-                .collect(),
+            crate_env: super::own_script::crate_env(),
         }
     }
 

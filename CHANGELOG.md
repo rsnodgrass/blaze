@@ -1001,6 +1001,11 @@ each one's section: what `[Unreleased]` had, and the title of each change merged
 
 ### Fixed
 
+- A crate blaze builds itself (a proc macro, a build script, or what either links) reads the
+  variables its build script set with `cargo:rustc-env`: `mime_guess`'s
+  `MIME_TYPES_GENERATED_PATH`, so `rust-embed-impl` builds. blaze kept only cargo's own
+  `CARGO_*` and `OUT_DIR`; it now reads the names from the script's output, `output` in cargo's
+  layout of `target` and `run/stdout` in the build-dir layout.
 - blaze finds the toolchain behind Homebrew's rustup. Homebrew installs `rustc` as a script
   that starts rustup, beside no toolchain, and blaze took a proxy only by the name `rustup`,
   so the script's directory was read as a toolchain with no standard library: every build
