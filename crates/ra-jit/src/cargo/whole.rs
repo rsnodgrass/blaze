@@ -354,7 +354,10 @@ fn whole(cwd: &Path, checkout: &Checkout, programs: &[Program]) -> Result<(), St
         }
         let _unwritten = crate::splice::unwritten(&plan.binary);
         let stand_ins = crate::link::stand_ins(&plan.binary).map_err(|it| format!("{it:#}"))?;
-        if !stand_ins.is_empty() {
+        // measurement aid on this fork, not for upstream: link a program whose unreached code
+        // blaze could not compile, so an edit loop can be timed while those are fixed
+        let allowed = std::env::var_os("BLAZE_ALLOW_STAND_INS").is_some_and(|it| it == "1");
+        if !stand_ins.is_empty() && !allowed {
             let mut reached: Vec<String> = stand_ins
                 .iter()
                 .take(SHOWN)
