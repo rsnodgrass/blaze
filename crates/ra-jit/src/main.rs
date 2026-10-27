@@ -5752,6 +5752,11 @@ fn refusal(
         return Some(Refused::Error(broken));
     }
     let hir_ty_codegen::OutOfDate { func, why, left_from_the_start, calls } = out_of_date?;
+    // measurement aid on this fork, not for upstream: keep rustc's copy of what ra-jit could
+    // not compile, so an edit loop can be timed while those are fixed
+    if std::env::var_os("BLAZE_ALLOW_STAND_INS").is_some_and(|it| it == "1") {
+        return None;
+    }
     let named =
         |func| hir::Function::from(func).name(db).display(db, syntax::Edition::CURRENT).to_string();
     let name = func.map_or("drop glue or a shim".to_owned(), |it| format!("`{}`", named(it)));
